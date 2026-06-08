@@ -88,6 +88,23 @@ describe("updateSimulation", () => {
     expect(struck.result.label).toBe("MAXIMUM DRUMSTRIKE");
   });
 
+  it("trembles before a maximum drumstrike snaps forward", () => {
+    const input = emptyInputFrame();
+    let state = updateSimulation(createInitialState(), { ...input, confirm: true }, 16);
+    state = {
+      ...state,
+      meterValue: 0.98,
+    };
+    state = updateSimulation(state, { ...input, confirm: true }, 16);
+
+    const trembling = stepFor(state, 300);
+    const snapped = stepFor(state, 620);
+
+    expect(trembling.mode).toBe("striking");
+    expect(trembling.drumstick.swing).toBeLessThan(0);
+    expect(snapped.drumstick.swing).toBeGreaterThan(1);
+  });
+
   it("breaks a scenery object during a strong replay launch", () => {
     const input = emptyInputFrame();
     let state = updateSimulation(createInitialState(), { ...input, confirm: true }, 16);
@@ -102,6 +119,24 @@ describe("updateSimulation", () => {
 
     expect(replaying.result.brokenCount).toBeGreaterThan(0);
     expect(replaying.breakables.some((item) => item.broken)).toBe(true);
+  });
+
+  it("breaks the brick wall behind the dummy after launch", () => {
+    const input = emptyInputFrame();
+    let state = updateSimulation(createInitialState(), { ...input, confirm: true }, 16);
+    state = {
+      ...state,
+      meterValue: 0.97,
+    };
+    state = updateSimulation(state, { ...input, confirm: true }, 16);
+    state = stepFor(state, 1_050);
+
+    const wall = state.breakables.find((item) => item.id === "brick-wall");
+
+    expect(state.mode).toBe("replay");
+    expect(wall?.broken).toBe(true);
+    expect(state.result.brokenCount).toBeGreaterThanOrEqual(1);
+    expect(state.result.score).toBeGreaterThan(wall?.points ?? 0);
   });
 
   it("keeps the dummy sliding after it reaches the floor", () => {

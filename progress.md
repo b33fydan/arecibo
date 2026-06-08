@@ -22,6 +22,9 @@ Original prompt: User brought an X post about a Claude Code browser-game stack a
 - Added ragdoll-style visual flailing for arms, legs, feet, and whole-body floor rolls; moved the center-field tree out of the replay camera path and added a closer slide camera.
 - Updated the drumstick strike animation with a visible wind-up, snap, and follow-through; the giant strike banner now waits until instant replay so the swing is visible.
 - Verified the ragdoll physics pass in `output/drumstick-ragdoll-physics` and `output/drumstick-ragdoll-standard`: 10 logic tests pass, floor slide remains active late in replay, screenshots are unobstructed, and no console error artifacts were emitted.
+- Slimmed the balloon dummy, added a larger brick wall breakable behind the target, made wall bricks scatter individually, and expanded the background with taller tree clusters.
+- Added maximum-drumstrike charge trembling, PWND impact motion graphic, smoke/shockwave puffs, louder maximum impact audio, extra echo pings, and a delayed speech echo.
+- Verified the wall/PWND pass in `output/drumstick-wall-pwnd` and `output/drumstick-wall-standard`: 12 logic tests pass, max charge stays in striking before the snap, brick wall breaks in replay, standard client has no console error artifacts, and screenshots show the wall, PWND impact, and readable replay.
 
 ## TODO
 - Tune camera beats further so very long launches feel more dynamic instead of drifting into a distant follow shot.

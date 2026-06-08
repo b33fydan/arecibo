@@ -80,6 +80,15 @@ export const DUMMY_START: Vector3State = { x: 0, y: DUMMY_GROUND_Y, z: -4.2 };
 
 const initialBreakables: BreakableState[] = [
   {
+    id: "brick-wall",
+    position: { x: 0, y: 1.05, z: -7.05 },
+    size: { x: 4.8, y: 2.1, z: 0.42 },
+    points: 950,
+    hitRadius: 2.45,
+    broken: false,
+    impactPower: 0,
+  },
+  {
     id: "hay-left",
     position: { x: -1.7, y: 0.35, z: -8.2 },
     size: { x: 0.95, y: 0.62, z: 0.9 },
@@ -190,7 +199,7 @@ export function labelForGrade(grade: StrikeGrade): Pick<StrikeResult, "label" | 
   if (grade === "maximum") {
     return {
       label: "MAXIMUM DRUMSTRIKE",
-      echo: "ULTRA BONK",
+      echo: "PWND!",
     };
   }
 

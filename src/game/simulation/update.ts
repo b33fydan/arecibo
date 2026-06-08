@@ -55,8 +55,8 @@ export function updateSimulation(
   }
 
   if (next.mode === "striking") {
-    const progress = clamp(next.modeTimeMs / STRIKE_DURATION_MS, 0, 1);
-    const swing = swingForProgress(progress);
+    const progress = clamp(next.modeTimeMs / strikeDurationForGrade(next.result.grade), 0, 1);
+    const swing = swingForProgress(progress, next.result.grade);
     next = {
       ...next,
       drumstick: {
@@ -294,10 +294,11 @@ function updateBreakables(
 
     const distance = Math.hypot(dummyPosition.x - item.position.x, dummyPosition.z - item.position.z);
     const canHitHeight = dummyPosition.y < item.position.y + item.size.y + 2.4;
+    const canBreakPower = item.id !== "brick-wall" || strikePower >= 0.18;
     return {
       ...item,
-      broken: distance < item.hitRadius && canHitHeight,
-      impactPower: distance < item.hitRadius && canHitHeight ? strikePower : 0,
+      broken: distance < item.hitRadius && canHitHeight && canBreakPower,
+      impactPower: distance < item.hitRadius && canHitHeight && canBreakPower ? strikePower : 0,
     };
   });
 }
@@ -306,7 +307,15 @@ export function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
 }
 
-function swingForProgress(value: number): number {
+function strikeDurationForGrade(grade: StrikeResult["grade"]): number {
+  return grade === "maximum" ? 820 : STRIKE_DURATION_MS;
+}
+
+function swingForProgress(value: number, grade: StrikeResult["grade"]): number {
+  if (grade === "maximum") {
+    return maximumSwingForProgress(value);
+  }
+
   if (value < 0.18) {
     return -0.22 * easeOutQuad(value / 0.18);
   }
@@ -318,6 +327,22 @@ function swingForProgress(value: number): number {
 
   const settle = easeOutQuad((value - 0.68) / 0.32);
   return 1.24 - settle * 0.18;
+}
+
+function maximumSwingForProgress(value: number): number {
+  if (value < 0.56) {
+    const charge = easeOutQuad(value / 0.56);
+    const tremble = Math.sin(value * 92) * 0.06 + Math.sin(value * 47) * 0.035;
+    return -0.18 - charge * 0.15 + tremble;
+  }
+
+  if (value < 0.8) {
+    const snap = easeOutCubic((value - 0.56) / 0.24);
+    return -0.22 + snap * 1.74;
+  }
+
+  const settle = easeOutQuad((value - 0.8) / 0.2);
+  return 1.52 - settle * 0.34;
 }
 
 function easeOutQuad(value: number): number {

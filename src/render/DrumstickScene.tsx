@@ -111,12 +111,16 @@ function Field() {
 function Trees() {
   const trees = useMemo(
     () => [
-      [-6, -7, 0.9],
-      [-4.2, -13, 1.1],
-      [5.3, -8.5, 0.95],
-      [7.2, -14, 1.25],
-      [-8, -18, 1.2],
-      [4.6, -22, 1.25],
+      [-6.4, -7.4, 1.25],
+      [-4.9, -13.4, 1.55],
+      [5.6, -8.8, 1.35],
+      [7.6, -14.4, 1.75],
+      [-8.8, -18.6, 1.6],
+      [4.9, -22.4, 1.65],
+      [-10.8, -27, 1.9],
+      [9.6, -27.8, 1.85],
+      [-13.6, -35, 2.05],
+      [13.2, -36, 2.15],
     ],
     [],
   );
@@ -126,12 +130,16 @@ function Trees() {
       {trees.map(([x, z, scale], index) => (
         <group key={`${x}-${z}`} position={[x, 0, z]} scale={scale}>
           <mesh castShadow position={[0, 0.55, 0]}>
-            <cylinderGeometry args={[0.12, 0.18, 1.1, 6]} />
+            <cylinderGeometry args={[0.13, 0.21, 1.18, 6]} />
             <meshStandardMaterial color="#9a6841" roughness={0.8} />
           </mesh>
           <mesh castShadow position={[0, 1.35, 0]} rotation-y={(index * Math.PI) / 5}>
-            <coneGeometry args={[0.72, 1.55, 7]} />
+            <coneGeometry args={[0.78, 1.85, 7]} />
             <meshStandardMaterial color={index % 2 ? "#287c4a" : "#31945a"} roughness={0.75} />
+          </mesh>
+          <mesh castShadow position={[0, 2.08, 0]} rotation-y={(index * Math.PI) / 7}>
+            <coneGeometry args={[0.58, 1.45, 7]} />
+            <meshStandardMaterial color={index % 2 ? "#1f6f43" : "#287f4d"} roughness={0.78} />
           </mesh>
         </group>
       ))}
@@ -142,39 +150,97 @@ function Trees() {
 function Breakables({ snapshot }: SnapshotProps) {
   return (
     <>
-      {snapshot.breakables.map((item, index) => (
-        <group key={item.id} position={[item.position.x, item.position.y, item.position.z]}>
-          <mesh
-            castShadow
-            position={item.broken ? [-0.18, -0.1, 0.08] : [0, 0, 0]}
-            rotation-z={item.broken ? -0.9 : 0}
-          >
-            <boxGeometry args={[item.size.x, item.size.y, item.size.z]} />
-            <meshStandardMaterial color={item.broken ? "#b77845" : "#d99b54"} roughness={0.72} />
-          </mesh>
-          {item.broken && (
-            <>
-              <mesh
-                castShadow
-                position={[0.32 + item.impactPower * 0.25, -0.2, -0.16]}
-                rotation={[0.8, 0.3 + item.impactPower, 0.5]}
-              >
-                <boxGeometry args={[item.size.x * 0.52, item.size.y * 0.28, item.size.z * 0.42]} />
-                <meshStandardMaterial color="#8e5a35" roughness={0.8} />
-              </mesh>
-              <mesh
-                castShadow
-                position={[-0.42 - item.impactPower * 0.18, -0.25, 0.22]}
-                rotation={[0.2, -0.6, -0.7 - item.impactPower]}
-              >
-                <boxGeometry args={[item.size.x * 0.38, item.size.y * 0.2, item.size.z * 0.5]} />
-                <meshStandardMaterial color="#f0bd72" roughness={0.78} />
-              </mesh>
-            </>
-          )}
-        </group>
-      ))}
+      {snapshot.breakables.map((item, index) =>
+        item.id === "brick-wall" ? (
+          <BrickWall key={item.id} item={item} snapshot={snapshot} />
+        ) : (
+          <group key={item.id} position={[item.position.x, item.position.y, item.position.z]}>
+            <mesh
+              castShadow
+              position={item.broken ? [-0.18, -0.1, 0.08] : [0, 0, 0]}
+              rotation-z={item.broken ? -0.9 : 0}
+            >
+              <boxGeometry args={[item.size.x, item.size.y, item.size.z]} />
+              <meshStandardMaterial color={item.broken ? "#b77845" : "#d99b54"} roughness={0.72} />
+            </mesh>
+            {item.broken && (
+              <>
+                <mesh
+                  castShadow
+                  position={[0.32 + item.impactPower * 0.25, -0.2, -0.16]}
+                  rotation={[0.8, 0.3 + item.impactPower, 0.5]}
+                >
+                  <boxGeometry args={[item.size.x * 0.52, item.size.y * 0.28, item.size.z * 0.42]} />
+                  <meshStandardMaterial color="#8e5a35" roughness={0.8} />
+                </mesh>
+                <mesh
+                  castShadow
+                  position={[-0.42 - item.impactPower * 0.18, -0.25, 0.22]}
+                  rotation={[0.2, -0.6, -0.7 - item.impactPower]}
+                >
+                  <boxGeometry args={[item.size.x * 0.38, item.size.y * 0.2, item.size.z * 0.5]} />
+                  <meshStandardMaterial color="#f0bd72" roughness={0.78} />
+                </mesh>
+              </>
+            )}
+          </group>
+        ),
+      )}
     </>
+  );
+}
+
+function BrickWall({ item, snapshot }: { item: GameSnapshot["breakables"][number]; snapshot: GameSnapshot }) {
+  const columns = 8;
+  const rows = 5;
+  const brickWidth = item.size.x / columns;
+  const brickHeight = item.size.y / rows;
+  const replayBurst = snapshot.mode === "replay" ? Math.min(1.6, snapshot.replayTimeMs / 850) : 0;
+  const breakForce = item.broken ? 0.45 + item.impactPower * 1.2 : 0;
+  const brickColor = ["#a73f2d", "#c55338", "#8f3328", "#d16b45"];
+
+  return (
+    <group position={[item.position.x, item.position.y, item.position.z]}>
+      {Array.from({ length: rows * columns }).map((_, index) => {
+        const row = Math.floor(index / columns);
+        const column = index % columns;
+        const stagger = row % 2 ? brickWidth * 0.5 : 0;
+        const x = (column - (columns - 1) / 2) * brickWidth + stagger - (row % 2 ? brickWidth * 0.25 : 0);
+        const y = (row - (rows - 1) / 2) * brickHeight;
+        const seed = (index * 12.9898) % 1;
+        const side = x >= 0 ? 1 : -1;
+        const burst = item.broken ? replayBurst * breakForce : 0;
+        const outward = item.broken
+          ? [
+              x + side * burst * (0.32 + Math.abs(x) * 0.16),
+              y + burst * (0.2 + row * 0.08) - replayBurst * 0.18,
+              burst * (-1.15 - row * 0.12 - seed * 0.45),
+            ]
+          : [x, y, 0];
+        const rotation = item.broken
+          ? [burst * (0.9 + seed), burst * side * (0.7 + row * 0.12), burst * side * (0.6 + column * 0.05)]
+          : [0, 0, 0];
+
+        return (
+          <mesh key={`${item.id}-${index}`} castShadow position={outward as [number, number, number]} rotation={rotation as [number, number, number]}>
+            <boxGeometry args={[brickWidth * 0.9, brickHeight * 0.8, item.size.z]} />
+            <meshStandardMaterial color={brickColor[index % brickColor.length]} roughness={0.8} />
+          </mesh>
+        );
+      })}
+      {!item.broken && (
+        <>
+          <mesh position={[0, item.size.y * 0.52, 0]} castShadow>
+            <boxGeometry args={[item.size.x + 0.16, 0.1, item.size.z + 0.08]} />
+            <meshStandardMaterial color="#6d332a" roughness={0.84} />
+          </mesh>
+          <mesh position={[0, -item.size.y * 0.52, 0]} castShadow>
+            <boxGeometry args={[item.size.x + 0.16, 0.1, item.size.z + 0.08]} />
+            <meshStandardMaterial color="#6d332a" roughness={0.84} />
+          </mesh>
+        </>
+      )}
+    </group>
   );
 }
 
@@ -190,6 +256,7 @@ function StrikeBurst({ snapshot }: SnapshotProps) {
   const power = snapshot.lockedPower || snapshot.result.power;
   const isMaximum = snapshot.result.grade === "maximum";
   const scale = 0.65 + power * 0.75;
+  const isImpactReplay = snapshot.mode === "replay" && snapshot.replayTimeMs < 1_350;
   const confetti = [
     ["#ffdf62", -0.9, 0.9, -4.15, 0.5],
     ["#ff5f7e", -0.35, 1.25, -4.35, -0.7],
@@ -221,7 +288,39 @@ function StrikeBurst({ snapshot }: SnapshotProps) {
             <meshStandardMaterial color={color} emissive={color} emissiveIntensity={0.28} roughness={0.55} />
           </mesh>
         ))}
+      {isMaximum && isImpactReplay && <MaximumImpactSmoke replayTimeMs={snapshot.replayTimeMs} />}
     </group>
+  );
+}
+
+function MaximumImpactSmoke({ replayTimeMs }: { replayTimeMs: number }) {
+  const burst = Math.min(1, replayTimeMs / 900);
+  const opacity = Math.max(0, 0.62 - burst * 0.34);
+  const puffs = [
+    [-0.72, 0.28, -0.08, 0.42],
+    [-0.32, 0.52, -0.22, 0.54],
+    [0.24, 0.44, 0.05, 0.48],
+    [0.78, 0.24, -0.12, 0.38],
+    [0.05, 0.72, -0.28, 0.5],
+  ] as const;
+
+  return (
+    <>
+      <mesh position={[0, 0, 0]} rotation-x={Math.PI / 2} scale={1 + burst * 1.8}>
+        <torusGeometry args={[1.05, 0.035, 8, 54]} />
+        <meshStandardMaterial color="#fff2a6" emissive="#ffdf62" emissiveIntensity={0.8} transparent opacity={0.78 - burst * 0.36} />
+      </mesh>
+      {puffs.map(([x, y, z, radius], index) => (
+        <mesh
+          key={`smoke-${index}`}
+          position={[x * (1 + burst * 1.8), y * (1 + burst * 0.9), z - burst * 0.55]}
+          scale={1 + burst * (1.2 + index * 0.12)}
+        >
+          <sphereGeometry args={[radius, 12, 8]} />
+          <meshStandardMaterial color={index % 2 ? "#d7d2c8" : "#f0eadf"} transparent opacity={opacity} roughness={1} />
+        </mesh>
+      ))}
+    </>
   );
 }
 
@@ -256,19 +355,19 @@ function BalloonDummy({ snapshot }: SnapshotProps) {
       ref={group}
       position={[snapshot.dummy.position.x, snapshot.dummy.position.y, snapshot.dummy.position.z]}
     >
-      <mesh castShadow position={[0, 0.45, 0]}>
+      <mesh castShadow position={[0, 0.45, 0]} scale={[0.76, 1, 0.72]}>
         <sphereGeometry args={[0.58, 18, 14]} />
         <meshStandardMaterial color="#ff7ab5" roughness={0.5} metalness={0.02} />
       </mesh>
-      <mesh castShadow position={[0, 1.13, 0]}>
+      <mesh castShadow position={[0, 1.12, 0]} scale={[0.78, 1, 0.74]}>
         <sphereGeometry args={[0.38, 18, 14]} />
         <meshStandardMaterial color="#ffd0e6" roughness={0.55} />
       </mesh>
-      <mesh castShadow position={[-0.46, 0.5, 0]} rotation={[0.15 * ragdoll, 0.2 * ragdoll, 0.65 + armFlail * 0.55]}>
+      <mesh castShadow position={[-0.36, 0.5, 0]} rotation={[0.15 * ragdoll, 0.2 * ragdoll, 0.65 + armFlail * 0.55]}>
         <capsuleGeometry args={[0.11, 0.55, 4, 8]} />
         <meshStandardMaterial color="#ff96c8" roughness={0.6} />
       </mesh>
-      <mesh castShadow position={[0.46, 0.5, 0]} rotation={[-0.12 * ragdoll, -0.18 * ragdoll, -0.65 + armFlail * 0.5]}>
+      <mesh castShadow position={[0.36, 0.5, 0]} rotation={[-0.12 * ragdoll, -0.18 * ragdoll, -0.65 + armFlail * 0.5]}>
         <capsuleGeometry args={[0.11, 0.55, 4, 8]} />
         <meshStandardMaterial color="#ff96c8" roughness={0.6} />
       </mesh>
@@ -301,15 +400,19 @@ function DrumstickView({ snapshot }: SnapshotProps) {
     const swing = snapshot.drumstick.swing;
     const windup = Math.min(0, swing);
     const followThrough = Math.max(0, swing);
+    const isMaximumCharge = snapshot.mode === "striking" && snapshot.result.grade === "maximum" && swing < 0;
+    const tremble = isMaximumCharge
+      ? Math.sin(clock.elapsedTime * 82) * 0.055 + Math.sin(clock.elapsedTime * 131) * 0.026
+      : 0;
     group.current.rotation.set(
-      -0.24 + windup * 0.75 - followThrough * 1.72 + idle,
-      0.06 + windup * 0.26 - followThrough * 0.2,
-      -0.42 - windup * 0.5 + followThrough * 0.92,
+      -0.24 + windup * 0.75 - followThrough * 1.72 + idle + tremble,
+      0.06 + windup * 0.26 - followThrough * 0.2 + tremble * 0.42,
+      -0.42 - windup * 0.5 + followThrough * 0.92 - tremble * 0.7,
     );
     group.current.position.set(
-      DRUMSTICK_BASE_POSITION.x + windup * 0.24 - followThrough * 0.18,
-      DRUMSTICK_BASE_POSITION.y - Math.abs(windup) * 0.06 + followThrough * 0.12,
-      DRUMSTICK_BASE_POSITION.z + Math.abs(windup) * 0.48 - followThrough * 1.42,
+      DRUMSTICK_BASE_POSITION.x + windup * 0.24 - followThrough * 0.18 + tremble * 0.08,
+      DRUMSTICK_BASE_POSITION.y - Math.abs(windup) * 0.06 + followThrough * 0.12 - tremble * 0.05,
+      DRUMSTICK_BASE_POSITION.z + Math.abs(windup) * 0.48 - followThrough * 1.42 + tremble * 0.16,
     );
   });
 

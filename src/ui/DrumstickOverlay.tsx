@@ -12,6 +12,10 @@ export function DrumstickOverlay({ snapshot, onStart, onRestart }: DrumstickOver
     snapshot.result.grade !== "none" &&
     snapshot.mode === "replay" &&
     snapshot.replayTimeMs < 1_600;
+  const showPwnd =
+    snapshot.result.grade === "maximum" &&
+    snapshot.mode === "replay" &&
+    snapshot.replayTimeMs < 1_250;
   const meterPercent = `${Math.max(4, snapshot.meterValue * 100)}%`;
 
   return (
@@ -40,6 +44,8 @@ export function DrumstickOverlay({ snapshot, onStart, onRestart }: DrumstickOver
           <strong>{snapshot.result.label}</strong>
         </div>
       )}
+
+      {showPwnd && <div className="pwnd-impact">PWND!</div>}
 
       {snapshot.mode === "replay" && (
         <div className="replay-stats">
