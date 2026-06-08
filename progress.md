@@ -13,6 +13,9 @@ Original prompt: User brought an X post about a Claude Code browser-game stack a
 - Verified maximum-hit path in `output/drumstick-maximum`: meter 97+, `MAXIMUM DRUMSTRIKE`, replay launch, one broken crate, 13k+ score, and no console errors.
 - Adjusted the first-person drumstick base placement 30% left, 5% down, and 15% toward the viewer so the target stays more visible before the strike.
 - Moved the drumstick base another 30% left and shortened the visible shaft by 50% so the drumstick reads closer to center without the long handle dominating the view.
+- Fixed replay completion so the balloon dummy, drumstick, meter, and breakables reset to the aiming setup after each strike while preserving best score.
+- Shifted the camera-anchored drumstick base another 30% left from the previous placement.
+- Added hold-and-drag horizontal view control for aiming: drag left/right to yaw the world view while the drumstick stays anchored in first-person.
 
 ## TODO
 - Tune camera beats further so very long launches feel more dynamic instead of drifting into a distant follow shot.

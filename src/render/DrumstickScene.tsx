@@ -6,17 +6,22 @@ import type { GameSnapshot } from "../game/simulation/state";
 
 interface DrumstickSceneProps {
   snapshot: GameSnapshot;
+  viewYaw: number;
+}
+
+interface SnapshotProps {
+  snapshot: GameSnapshot;
 }
 
 const DRUMSTICK_BASE_POSITION = {
-  x: 0.588,
-  y: 0.684,
-  z: 1.3225,
+  x: 0.4116,
+  y: -0.82,
+  z: -2.28,
 };
 
 const DRUMSTICK_SHAFT_LENGTH = 0.975;
 
-export function DrumstickScene({ snapshot }: DrumstickSceneProps) {
+export function DrumstickScene({ snapshot, viewYaw }: DrumstickSceneProps) {
   return (
     <Canvas
       className="game-canvas"
@@ -26,12 +31,12 @@ export function DrumstickScene({ snapshot }: DrumstickSceneProps) {
     >
       <color attach="background" args={["#8fd3ff"]} />
       <fog attach="fog" args={["#bfe8ff", 24, 150]} />
-      <SceneContents snapshot={snapshot} />
+      <SceneContents snapshot={snapshot} viewYaw={viewYaw} />
     </Canvas>
   );
 }
 
-function SceneContents({ snapshot }: DrumstickSceneProps) {
+function SceneContents({ snapshot, viewYaw }: DrumstickSceneProps) {
   const cameraRef = useRef<THREE.PerspectiveCamera>(null);
 
   useFrame(() => {
@@ -55,12 +60,14 @@ function SceneContents({ snapshot }: DrumstickSceneProps) {
     }
 
     camera.position.lerp(new THREE.Vector3(0, 1.55, 3.6), 0.18);
-    camera.lookAt(0, 1.2, -4.3);
+    camera.lookAt(Math.sin(viewYaw) * 3.5, 1.2, -4.3 + Math.abs(viewYaw) * 0.4);
   });
 
   return (
     <>
-      <PerspectiveCamera ref={cameraRef} makeDefault fov={58} position={[0, 1.55, 3.6]} />
+      <PerspectiveCamera ref={cameraRef} makeDefault fov={58} position={[0, 1.55, 3.6]}>
+        {snapshot.mode !== "replay" && <DrumstickView snapshot={snapshot} />}
+      </PerspectiveCamera>
       <ambientLight intensity={0.72} />
       <directionalLight
         castShadow
@@ -74,7 +81,6 @@ function SceneContents({ snapshot }: DrumstickSceneProps) {
       <Trees />
       <Breakables snapshot={snapshot} />
       <BalloonDummy snapshot={snapshot} />
-      <DrumstickView snapshot={snapshot} />
       <StrikeBurst snapshot={snapshot} />
     </>
   );
@@ -130,7 +136,7 @@ function Trees() {
   );
 }
 
-function Breakables({ snapshot }: DrumstickSceneProps) {
+function Breakables({ snapshot }: SnapshotProps) {
   return (
     <>
       {snapshot.breakables.map((item, index) => (
@@ -169,7 +175,7 @@ function Breakables({ snapshot }: DrumstickSceneProps) {
   );
 }
 
-function StrikeBurst({ snapshot }: DrumstickSceneProps) {
+function StrikeBurst({ snapshot }: SnapshotProps) {
   const isActive =
     snapshot.result.grade !== "none" &&
     (snapshot.mode === "striking" || (snapshot.mode === "replay" && snapshot.replayTimeMs < 1_500));
@@ -216,7 +222,7 @@ function StrikeBurst({ snapshot }: DrumstickSceneProps) {
   );
 }
 
-function BalloonDummy({ snapshot }: DrumstickSceneProps) {
+function BalloonDummy({ snapshot }: SnapshotProps) {
   const group = useRef<THREE.Group>(null);
 
   useFrame(({ clock }) => {
@@ -263,7 +269,7 @@ function BalloonDummy({ snapshot }: DrumstickSceneProps) {
   );
 }
 
-function DrumstickView({ snapshot }: DrumstickSceneProps) {
+function DrumstickView({ snapshot }: SnapshotProps) {
   const group = useRef<THREE.Group>(null);
 
   useFrame(({ clock }) => {

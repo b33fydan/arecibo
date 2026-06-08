@@ -104,6 +104,12 @@ h1 {
   border-radius: 8px;
   background: #86cef8;
   box-shadow: 0 20px 60px rgba(40, 44, 42, 0.22);
+  cursor: grab;
+  touch-action: none;
+}
+
+.game-frame:active {
+  cursor: grabbing;
 }
 
 .game-canvas,

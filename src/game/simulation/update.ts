@@ -191,14 +191,47 @@ function updateReplay(state: GameState, deltaMs: number): GameState {
     score,
     brokenCount,
   };
+  const bestScore = Math.max(state.bestScore, score);
+
+  if (replayDone) {
+    return {
+      ...state,
+      mode: "aiming",
+      modeTimeMs: 0,
+      replayTimeMs: 0,
+      meterPhase: 0,
+      meterValue: 0.5,
+      lockedPower: 0,
+      drumstick: {
+        ...state.drumstick,
+        swing: 0,
+      },
+      dummy: createDummy(),
+      breakables: cloneBreakables(state.breakables).map((item) => ({
+        ...item,
+        broken: false,
+        impactPower: 0,
+      })),
+      result: {
+        grade: "none",
+        power: 0,
+        distance: 0,
+        score: 0,
+        brokenCount: 0,
+        label: "Aim",
+        echo: "Hit space at the top",
+      },
+      bestScore,
+    };
+  }
 
   return {
     ...state,
-    mode: replayDone ? "aiming" : state.mode,
-    modeTimeMs: replayDone ? 0 : state.modeTimeMs,
+    mode: state.mode,
+    modeTimeMs: state.modeTimeMs,
     replayTimeMs: state.replayTimeMs + deltaMs,
-    meterPhase: replayDone ? 0 : state.meterPhase,
-    meterValue: replayDone ? 0.5 : state.meterValue,
+    meterPhase: state.meterPhase,
+    meterValue: state.meterValue,
     drumstick: {
       ...state.drumstick,
       swing: Math.max(0, state.drumstick.swing - dt * 0.85),
@@ -210,7 +243,7 @@ function updateReplay(state: GameState, deltaMs: number): GameState {
     },
     breakables,
     result,
-    bestScore: Math.max(state.bestScore, score),
+    bestScore,
   };
 }
 

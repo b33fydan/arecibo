@@ -18,8 +18,11 @@ function App() {
   const lastSerializedRef = useRef("");
   const frameRef = useRef<number | null>(null);
   const lastCueRef = useRef("");
+  const dragViewRef = useRef({ active: false, lastX: 0 });
+  const viewYawRef = useRef(0);
   const initialSnapshot = useMemo(() => toSnapshot(stateRef.current), []);
   const [snapshot, setSnapshot] = useState<GameSnapshot>(initialSnapshot);
+  const [viewYaw, setViewYaw] = useState(0);
 
   useEffect(() => {
     const publish = () => {
@@ -63,7 +66,13 @@ function App() {
       frameRef.current = requestAnimationFrame(tick);
     };
 
-    window.render_game_to_text = () => serializeGameState(stateRef.current);
+    window.render_game_to_text = () =>
+      JSON.stringify({
+        ...toSnapshot(stateRef.current),
+        view: {
+          yaw: Math.round(viewYawRef.current * 100) / 100,
+        },
+      });
     window.advanceTime = (ms: number) => {
       const steps = Math.max(1, Math.round(ms / (1000 / 60)));
       for (let index = 0; index < steps; index += 1) {
@@ -112,8 +121,35 @@ function App() {
           <Hud snapshot={snapshot} />
         </div>
 
-        <div className="game-frame">
-          <DrumstickScene snapshot={snapshot} />
+        <div
+          className="game-frame"
+          onPointerDown={(event) => {
+            if (snapshot.mode === "menu" || event.button !== 0) return;
+            if ((event.target as HTMLElement).closest("button")) return;
+            dragViewRef.current = { active: true, lastX: event.clientX };
+            event.currentTarget.setPointerCapture(event.pointerId);
+          }}
+          onPointerMove={(event) => {
+            if (!dragViewRef.current.active) return;
+            const deltaX = event.clientX - dragViewRef.current.lastX;
+            dragViewRef.current.lastX = event.clientX;
+            setViewYaw((current) => {
+              const next = clamp(current + deltaX * 0.004, -0.62, 0.62);
+              viewYawRef.current = next;
+              return next;
+            });
+          }}
+          onPointerUp={(event) => {
+            dragViewRef.current.active = false;
+            if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+              event.currentTarget.releasePointerCapture(event.pointerId);
+            }
+          }}
+          onPointerCancel={() => {
+            dragViewRef.current.active = false;
+          }}
+        >
+          <DrumstickScene snapshot={snapshot} viewYaw={viewYaw} />
           <DrumstickOverlay
             snapshot={snapshot}
             onStart={() => sendGameCommand("start")}
@@ -134,4 +170,8 @@ function toggleFullscreen() {
   }
 
   document.exitFullscreen().catch(() => undefined);
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, value));
 }

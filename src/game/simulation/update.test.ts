@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { emptyInputFrame } from "../input/actions";
-import { createInitialState, STRIKE_DURATION_MS } from "./state";
+import { createInitialState, DUMMY_START, REPLAY_DURATION_MS, STRIKE_DURATION_MS } from "./state";
 import type { GameState } from "./state";
 import { updateSimulation } from "./update";
 
@@ -89,6 +89,26 @@ describe("updateSimulation", () => {
 
     expect(replaying.result.brokenCount).toBeGreaterThan(0);
     expect(replaying.breakables.some((item) => item.broken)).toBe(true);
+  });
+
+  it("resets the dummy and breakables when replay ends", () => {
+    const input = emptyInputFrame();
+    let state = updateSimulation(createInitialState(), { ...input, confirm: true }, 16);
+    state = {
+      ...state,
+      meterValue: 0.96,
+    };
+    state = updateSimulation(state, { ...input, confirm: true }, 16);
+    state = stepFor(state, STRIKE_DURATION_MS + 20);
+    state = stepFor(state, 900);
+
+    const reset = stepFor(state, REPLAY_DURATION_MS);
+
+    expect(reset.mode).toBe("aiming");
+    expect(reset.dummy.launched).toBe(false);
+    expect(reset.dummy.position).toEqual(DUMMY_START);
+    expect(reset.breakables.every((item) => !item.broken)).toBe(true);
+    expect(reset.bestScore).toBeGreaterThan(0);
   });
 });
 
