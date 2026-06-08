@@ -9,10 +9,12 @@ interface DrumstickSceneProps {
 }
 
 const DRUMSTICK_BASE_POSITION = {
-  x: 0.84,
+  x: 0.588,
   y: 0.684,
   z: 1.3225,
 };
+
+const DRUMSTICK_SHAFT_LENGTH = 0.975;
 
 export function DrumstickScene({ snapshot }: DrumstickSceneProps) {
   return (
@@ -283,7 +285,7 @@ function DrumstickView({ snapshot }: DrumstickSceneProps) {
       rotation={[-0.24, 0.06, -0.42]}
     >
       <mesh castShadow rotation-z={Math.PI / 2}>
-        <capsuleGeometry args={[0.14, 1.95, 8, 14]} />
+        <capsuleGeometry args={[0.14, DRUMSTICK_SHAFT_LENGTH, 8, 14]} />
         <meshStandardMaterial color="#c86f3d" roughness={0.58} />
       </mesh>
       <mesh castShadow position={[-1.08, 0, 0]} rotation-z={Math.PI / 2}>
