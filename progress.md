@@ -11,6 +11,7 @@ Original prompt: User brought an X post about a Claude Code browser-game stack a
 - Desktop and mobile responsive screenshots were checked under `output/drumstick-responsive`; no viewport overflow, no Restart/meter overlap, WebGL pixels were non-transparent, and no console errors were captured.
 - Added the first feel pass: faster timing meter, maximum-hit threshold, stronger top-end launch, breakable scoring, visible debris, impact rings/confetti, echo-style Web Audio cues, and speech-synthesis announcer callouts.
 - Verified maximum-hit path in `output/drumstick-maximum`: meter 97+, `MAXIMUM DRUMSTRIKE`, replay launch, one broken crate, 13k+ score, and no console errors.
+- Adjusted the first-person drumstick base placement 30% left, 5% down, and 15% toward the viewer so the target stays more visible before the strike.
 
 ## TODO
 - Tune camera beats further so very long launches feel more dynamic instead of drifting into a distant follow shot.

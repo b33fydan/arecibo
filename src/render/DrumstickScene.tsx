@@ -8,6 +8,12 @@ interface DrumstickSceneProps {
   snapshot: GameSnapshot;
 }
 
+const DRUMSTICK_BASE_POSITION = {
+  x: 0.84,
+  y: 0.684,
+  z: 1.3225,
+};
+
 export function DrumstickScene({ snapshot }: DrumstickSceneProps) {
   return (
     <Canvas
@@ -263,11 +269,19 @@ function DrumstickView({ snapshot }: DrumstickSceneProps) {
     const idle = Math.sin(clock.elapsedTime * 2.2) * 0.025;
     const swing = snapshot.drumstick.swing;
     group.current.rotation.set(-0.24 - swing * 1.52 + idle, 0.06 - swing * 0.18, -0.42 + swing * 0.78);
-    group.current.position.set(1.2 - swing * 0.18, 0.72 + swing * 0.12, 1.15 - swing * 1.25);
+    group.current.position.set(
+      DRUMSTICK_BASE_POSITION.x - swing * 0.18,
+      DRUMSTICK_BASE_POSITION.y + swing * 0.12,
+      DRUMSTICK_BASE_POSITION.z - swing * 1.25,
+    );
   });
 
   return (
-    <group ref={group} position={[1.2, 0.72, 1.15]} rotation={[-0.24, 0.06, -0.42]}>
+    <group
+      ref={group}
+      position={[DRUMSTICK_BASE_POSITION.x, DRUMSTICK_BASE_POSITION.y, DRUMSTICK_BASE_POSITION.z]}
+      rotation={[-0.24, 0.06, -0.42]}
+    >
       <mesh castShadow rotation-z={Math.PI / 2}>
         <capsuleGeometry args={[0.14, 1.95, 8, 14]} />
         <meshStandardMaterial color="#c86f3d" roughness={0.58} />
