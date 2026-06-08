@@ -16,7 +16,7 @@ interface SnapshotProps {
 const DRUMSTICK_BASE_POSITION = {
   x: 0.4116,
   y: -0.82,
-  z: -2.28,
+  z: -1.94,
 };
 
 const DRUMSTICK_SHAFT_LENGTH = 0.975;
@@ -60,7 +60,7 @@ function SceneContents({ snapshot, viewYaw }: DrumstickSceneProps) {
     }
 
     camera.position.lerp(new THREE.Vector3(0, 1.55, 3.6), 0.18);
-    camera.lookAt(Math.sin(viewYaw) * 3.5, 1.2, -4.3 + Math.abs(viewYaw) * 0.4);
+    camera.lookAt(Math.sin(viewYaw) * 3.5, 1.02, -4.3 + Math.abs(viewYaw) * 0.4);
   });
 
   return (
@@ -264,6 +264,14 @@ function BalloonDummy({ snapshot }: SnapshotProps) {
       <mesh castShadow position={[0.18, -0.05, 0]} rotation-z={-0.18}>
         <capsuleGeometry args={[0.12, 0.55, 4, 8]} />
         <meshStandardMaterial color="#8fc2ff" roughness={0.65} />
+      </mesh>
+      <mesh castShadow position={[-0.2, -0.38, 0.07]} scale={[1.25, 0.42, 0.75]}>
+        <sphereGeometry args={[0.15, 10, 8]} />
+        <meshStandardMaterial color="#6da7e8" roughness={0.68} />
+      </mesh>
+      <mesh castShadow position={[0.2, -0.38, 0.07]} scale={[1.25, 0.42, 0.75]}>
+        <sphereGeometry args={[0.15, 10, 8]} />
+        <meshStandardMaterial color="#6da7e8" roughness={0.68} />
       </mesh>
     </group>
   );

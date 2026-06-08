@@ -16,8 +16,11 @@ Original prompt: User brought an X post about a Claude Code browser-game stack a
 - Fixed replay completion so the balloon dummy, drumstick, meter, and breakables reset to the aiming setup after each strike while preserving best score.
 - Shifted the camera-anchored drumstick base another 30% left from the previous placement.
 - Added hold-and-drag horizontal view control for aiming: drag left/right to yaw the world view while the drumstick stays anchored in first-person.
+- Moved the drumstick 15% closer to the viewer, lowered the dummy to ground contact, added small planted feet, and adjusted aim camera height for the grounded pose.
+- Verified the placement pass in `output/drumstick-placement-grounded`: aiming screenshot shows the dummy standing on the target patch, standard client replay still works, and no console error artifacts were emitted.
 
 ## TODO
 - Tune camera beats further so very long launches feel more dynamic instead of drifting into a distant follow shot.
+- Next polish pass: aesthetics, sound design, instant replay timing, and slow-motion impact beats.
 - Keep `window.render_game_to_text()` and `window.advanceTime(ms)` working during gameplay changes.
 - Consider Rapier physics after the simple ballistic replay proves fun.
