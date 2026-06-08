@@ -1,6 +1,7 @@
 import type { InputFrame } from "../input/actions";
 import type { BreakableState, GameState, StrikeResult, Vector3State } from "./state";
 import {
+  DUMMY_GROUND_Y,
   DUMMY_START,
   GRAVITY,
   METER_SPEED,
@@ -11,6 +12,11 @@ import {
   gradeForPower,
   labelForGrade,
 } from "./state";
+
+const FLOOR_BOUNCE_MIN_SPEED = 1.35;
+const FLOOR_BOUNCE = 0.2;
+const SLIDE_FRICTION_PER_SECOND = 0.66;
+const STOP_SPEED = 0.18;
 
 export function updateSimulation(
   state: GameState,
@@ -50,7 +56,7 @@ export function updateSimulation(
 
   if (next.mode === "striking") {
     const progress = clamp(next.modeTimeMs / STRIKE_DURATION_MS, 0, 1);
-    const swing = easeOutBack(progress);
+    const swing = swingForProgress(progress);
     next = {
       ...next,
       drumstick: {
@@ -171,13 +177,43 @@ function updateReplay(state: GameState, deltaMs: number): GameState {
     y: state.dummy.position.y + velocity.y * dt,
     z: state.dummy.position.z + velocity.z * dt,
   };
+  let grounded = false;
 
-  if (position.y < 0.5) {
-    position.y = 0.5;
-    velocity.y = Math.abs(velocity.y) * 0.32;
-    velocity.x *= 0.84;
-    velocity.z *= 0.84;
+  if (position.y <= DUMMY_GROUND_Y) {
+    grounded = true;
+    position.y = DUMMY_GROUND_Y;
+
+    const impactSpeed = Math.abs(velocity.y);
+    velocity.y = impactSpeed > FLOOR_BOUNCE_MIN_SPEED ? impactSpeed * FLOOR_BOUNCE : 0;
+
+    const slideDamping = Math.pow(SLIDE_FRICTION_PER_SECOND, dt);
+    velocity.x *= slideDamping;
+    velocity.z *= slideDamping;
+
+    const slideSpeed = Math.hypot(velocity.x, velocity.z);
+    if (slideSpeed > STOP_SPEED) {
+      const replaySeconds = (state.replayTimeMs + deltaMs) / 1000;
+      const jitter = Math.sin(replaySeconds * 8.5) * state.lockedPower * 0.72 * dt;
+      const weave = Math.cos(replaySeconds * 5.2) * state.lockedPower * 0.28 * dt;
+      velocity.x += jitter + weave;
+    } else {
+      velocity.x = 0;
+      velocity.z = 0;
+    }
   }
+
+  const horizontalSpeed = Math.hypot(velocity.x, velocity.z);
+  const spin = grounded && horizontalSpeed > STOP_SPEED
+    ? {
+        x: clamp(state.dummy.spin.x + horizontalSpeed * 0.018, 0, 20),
+        y: clamp(
+          state.dummy.spin.y + Math.sin((state.replayTimeMs + deltaMs) * 0.01) * 0.045,
+          -10,
+          12,
+        ),
+        z: clamp(state.dummy.spin.z + (Math.abs(velocity.x) + horizontalSpeed * 0.35) * 0.016, 0, 18),
+      }
+    : state.dummy.spin;
 
   const distance = Math.max(0, DUMMY_START.z - position.z);
   const breakables = updateBreakables(state.breakables, position, state.lockedPower);
@@ -240,6 +276,7 @@ function updateReplay(state: GameState, deltaMs: number): GameState {
       ...state.dummy,
       position,
       velocity,
+      spin,
     },
     breakables,
     result,
@@ -269,8 +306,24 @@ export function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
 }
 
-function easeOutBack(value: number): number {
-  const c1 = 1.70158;
-  const c3 = c1 + 1;
-  return 1 + c3 * Math.pow(value - 1, 3) + c1 * Math.pow(value - 1, 2);
+function swingForProgress(value: number): number {
+  if (value < 0.18) {
+    return -0.22 * easeOutQuad(value / 0.18);
+  }
+
+  if (value < 0.68) {
+    const snap = easeOutCubic((value - 0.18) / 0.5);
+    return -0.22 + snap * 1.46;
+  }
+
+  const settle = easeOutQuad((value - 0.68) / 0.32);
+  return 1.24 - settle * 0.18;
+}
+
+function easeOutQuad(value: number): number {
+  return 1 - Math.pow(1 - clamp(value, 0, 1), 2);
+}
+
+function easeOutCubic(value: number): number {
+  return 1 - Math.pow(1 - clamp(value, 0, 1), 3);
 }

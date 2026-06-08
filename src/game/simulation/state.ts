@@ -75,7 +75,8 @@ export const METER_SPEED = 0.0094;
 export const GRAVITY = -12.8;
 export const PERFECT_POWER = 0.94;
 export const SOLID_POWER = 0.7;
-export const DUMMY_START: Vector3State = { x: 0, y: 0.45, z: -4.2 };
+export const DUMMY_GROUND_Y = 0.45;
+export const DUMMY_START: Vector3State = { x: 0, y: DUMMY_GROUND_Y, z: -4.2 };
 
 const initialBreakables: BreakableState[] = [
   {

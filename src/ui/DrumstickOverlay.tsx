@@ -10,7 +10,8 @@ export function DrumstickOverlay({ snapshot, onStart, onRestart }: DrumstickOver
   const showPanel = snapshot.mode === "menu";
   const showStrikeBanner =
     snapshot.result.grade !== "none" &&
-    (snapshot.mode === "striking" || (snapshot.mode === "replay" && snapshot.replayTimeMs < 1_600));
+    snapshot.mode === "replay" &&
+    snapshot.replayTimeMs < 1_600;
   const meterPercent = `${Math.max(4, snapshot.meterValue * 100)}%`;
 
   return (

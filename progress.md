@@ -18,6 +18,10 @@ Original prompt: User brought an X post about a Claude Code browser-game stack a
 - Added hold-and-drag horizontal view control for aiming: drag left/right to yaw the world view while the drumstick stays anchored in first-person.
 - Moved the drumstick 15% closer to the viewer, lowered the dummy to ground contact, added small planted feet, and adjusted aim camera height for the grounded pose.
 - Verified the placement pass in `output/drumstick-placement-grounded`: aiming screenshot shows the dummy standing on the target patch, standard client replay still works, and no console error artifacts were emitted.
+- Tuned replay physics so the dummy keeps floor velocity after impact, slides for longer with low friction, gains rolling spin while grounded, and gets small deterministic side jitter for a loose ragdoll feel.
+- Added ragdoll-style visual flailing for arms, legs, feet, and whole-body floor rolls; moved the center-field tree out of the replay camera path and added a closer slide camera.
+- Updated the drumstick strike animation with a visible wind-up, snap, and follow-through; the giant strike banner now waits until instant replay so the swing is visible.
+- Verified the ragdoll physics pass in `output/drumstick-ragdoll-physics` and `output/drumstick-ragdoll-standard`: 10 logic tests pass, floor slide remains active late in replay, screenshots are unobstructed, and no console error artifacts were emitted.
 
 ## TODO
 - Tune camera beats further so very long launches feel more dynamic instead of drifting into a distant follow shot.

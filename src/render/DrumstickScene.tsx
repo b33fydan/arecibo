@@ -45,16 +45,19 @@ function SceneContents({ snapshot, viewYaw }: DrumstickSceneProps) {
 
     if (snapshot.mode === "replay") {
       const replaySeconds = snapshot.replayTimeMs / 1000;
+      const horizontalSpeed = Math.hypot(snapshot.dummy.velocity.x, snapshot.dummy.velocity.z);
+      const isGroundedRoll = snapshot.dummy.position.y <= 0.55 && horizontalSpeed > 0.18;
       const target = new THREE.Vector3(
         snapshot.dummy.position.x,
-        snapshot.dummy.position.y + 0.8,
+        snapshot.dummy.position.y + (isGroundedRoll ? 0.38 : 0.8),
         snapshot.dummy.position.z,
       );
       const openingCam = new THREE.Vector3(1.9, 1.85, 1.6);
       const chaseCam = new THREE.Vector3(target.x + 4.2, 2.9, target.z + 6.8);
       const wideCam = new THREE.Vector3(target.x + 6.8, 4.1, target.z + 8.6);
-      const desired = replaySeconds < 0.55 ? openingCam : replaySeconds < 2.4 ? chaseCam : wideCam;
-      camera.position.lerp(desired, replaySeconds < 0.55 ? 0.18 : 0.08);
+      const slideCam = new THREE.Vector3(target.x + 3.2, 1.35, target.z + 4.6);
+      const desired = replaySeconds < 0.55 ? openingCam : isGroundedRoll ? slideCam : replaySeconds < 2.4 ? chaseCam : wideCam;
+      camera.position.lerp(desired, isGroundedRoll ? 0.45 : replaySeconds < 0.55 ? 0.18 : 0.08);
       camera.lookAt(target);
       return;
     }
@@ -113,7 +116,7 @@ function Trees() {
       [5.3, -8.5, 0.95],
       [7.2, -14, 1.25],
       [-8, -18, 1.2],
-      [0, -20, 1.4],
+      [4.6, -22, 1.25],
     ],
     [],
   );
@@ -224,15 +227,27 @@ function StrikeBurst({ snapshot }: SnapshotProps) {
 
 function BalloonDummy({ snapshot }: SnapshotProps) {
   const group = useRef<THREE.Group>(null);
+  const replaySeconds = snapshot.replayTimeMs / 1000;
+  const isReplay = snapshot.mode === "replay" && snapshot.dummy.launched;
+  const horizontalSpeed = Math.hypot(snapshot.dummy.velocity.x, snapshot.dummy.velocity.z);
+  const isGroundedRoll = isReplay && snapshot.dummy.position.y <= 0.5 && horizontalSpeed > 0.18;
+  const ragdoll = isReplay ? Math.min(1.25, 0.28 + horizontalSpeed * 0.055) : 0;
+  const armFlail = Math.sin(replaySeconds * 13.5) * ragdoll;
+  const legFlail = Math.cos(replaySeconds * 11.2) * ragdoll;
+  const footRoll = Math.sin(replaySeconds * 17.5) * ragdoll;
 
   useFrame(({ clock }) => {
     if (!group.current) return;
-    const spinTime = snapshot.replayTimeMs / 1000;
+    const spinTime = replaySeconds;
     const wobble = Math.sin(clock.elapsedTime * 4) * 0.04;
+    const rollBoost = isGroundedRoll ? 0.3 + horizontalSpeed * 0.012 : 0.16;
+    const groundLean = isGroundedRoll ? Math.PI * 0.42 : 0;
     group.current.rotation.set(
-      snapshot.dummy.spin.x * spinTime * 0.16 + wobble,
-      snapshot.dummy.spin.y * spinTime * 0.14,
-      snapshot.dummy.spin.z * spinTime * 0.18,
+      groundLean + snapshot.dummy.spin.x * spinTime * rollBoost + wobble,
+      snapshot.dummy.spin.y * spinTime * (isGroundedRoll ? 0.24 : 0.14) + Math.sin(spinTime * 9) * ragdoll * 0.1,
+      groundLean * 0.7 +
+        snapshot.dummy.spin.z * spinTime * (isGroundedRoll ? 0.31 : 0.18) +
+        Math.cos(spinTime * 8) * ragdoll * 0.12,
     );
   });
 
@@ -249,27 +264,27 @@ function BalloonDummy({ snapshot }: SnapshotProps) {
         <sphereGeometry args={[0.38, 18, 14]} />
         <meshStandardMaterial color="#ffd0e6" roughness={0.55} />
       </mesh>
-      <mesh castShadow position={[-0.46, 0.5, 0]} rotation-z={0.65}>
+      <mesh castShadow position={[-0.46, 0.5, 0]} rotation={[0.15 * ragdoll, 0.2 * ragdoll, 0.65 + armFlail * 0.55]}>
         <capsuleGeometry args={[0.11, 0.55, 4, 8]} />
         <meshStandardMaterial color="#ff96c8" roughness={0.6} />
       </mesh>
-      <mesh castShadow position={[0.46, 0.5, 0]} rotation-z={-0.65}>
+      <mesh castShadow position={[0.46, 0.5, 0]} rotation={[-0.12 * ragdoll, -0.18 * ragdoll, -0.65 + armFlail * 0.5]}>
         <capsuleGeometry args={[0.11, 0.55, 4, 8]} />
         <meshStandardMaterial color="#ff96c8" roughness={0.6} />
       </mesh>
-      <mesh castShadow position={[-0.18, -0.05, 0]} rotation-z={0.18}>
+      <mesh castShadow position={[-0.18, -0.05, 0]} rotation={[0.18 * ragdoll, -0.1 * ragdoll, 0.18 + legFlail * 0.35]}>
         <capsuleGeometry args={[0.12, 0.55, 4, 8]} />
         <meshStandardMaterial color="#8fc2ff" roughness={0.65} />
       </mesh>
-      <mesh castShadow position={[0.18, -0.05, 0]} rotation-z={-0.18}>
+      <mesh castShadow position={[0.18, -0.05, 0]} rotation={[-0.16 * ragdoll, 0.12 * ragdoll, -0.18 - legFlail * 0.32]}>
         <capsuleGeometry args={[0.12, 0.55, 4, 8]} />
         <meshStandardMaterial color="#8fc2ff" roughness={0.65} />
       </mesh>
-      <mesh castShadow position={[-0.2, -0.38, 0.07]} scale={[1.25, 0.42, 0.75]}>
+      <mesh castShadow position={[-0.2, -0.38, 0.07]} rotation={[0, footRoll * 0.24, footRoll * 0.18]} scale={[1.25, 0.42, 0.75]}>
         <sphereGeometry args={[0.15, 10, 8]} />
         <meshStandardMaterial color="#6da7e8" roughness={0.68} />
       </mesh>
-      <mesh castShadow position={[0.2, -0.38, 0.07]} scale={[1.25, 0.42, 0.75]}>
+      <mesh castShadow position={[0.2, -0.38, 0.07]} rotation={[0, -footRoll * 0.22, -footRoll * 0.16]} scale={[1.25, 0.42, 0.75]}>
         <sphereGeometry args={[0.15, 10, 8]} />
         <meshStandardMaterial color="#6da7e8" roughness={0.68} />
       </mesh>
@@ -284,11 +299,17 @@ function DrumstickView({ snapshot }: SnapshotProps) {
     if (!group.current) return;
     const idle = Math.sin(clock.elapsedTime * 2.2) * 0.025;
     const swing = snapshot.drumstick.swing;
-    group.current.rotation.set(-0.24 - swing * 1.52 + idle, 0.06 - swing * 0.18, -0.42 + swing * 0.78);
+    const windup = Math.min(0, swing);
+    const followThrough = Math.max(0, swing);
+    group.current.rotation.set(
+      -0.24 + windup * 0.75 - followThrough * 1.72 + idle,
+      0.06 + windup * 0.26 - followThrough * 0.2,
+      -0.42 - windup * 0.5 + followThrough * 0.92,
+    );
     group.current.position.set(
-      DRUMSTICK_BASE_POSITION.x - swing * 0.18,
-      DRUMSTICK_BASE_POSITION.y + swing * 0.12,
-      DRUMSTICK_BASE_POSITION.z - swing * 1.25,
+      DRUMSTICK_BASE_POSITION.x + windup * 0.24 - followThrough * 0.18,
+      DRUMSTICK_BASE_POSITION.y - Math.abs(windup) * 0.06 + followThrough * 0.12,
+      DRUMSTICK_BASE_POSITION.z + Math.abs(windup) * 0.48 - followThrough * 1.42,
     );
   });
 

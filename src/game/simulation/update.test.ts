@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { emptyInputFrame } from "../input/actions";
-import { createInitialState, DUMMY_START, REPLAY_DURATION_MS, STRIKE_DURATION_MS } from "./state";
+import { createInitialState, DUMMY_GROUND_Y, DUMMY_START, REPLAY_DURATION_MS, STRIKE_DURATION_MS } from "./state";
 import type { GameState } from "./state";
 import { updateSimulation } from "./update";
 
@@ -33,6 +33,19 @@ describe("updateSimulation", () => {
     expect(struck.mode).toBe("striking");
     expect(struck.lockedPower).toBeGreaterThan(0);
     expect(struck.result.score).toBeGreaterThan(0);
+  });
+
+  it("winds up before the drumstick follow-through", () => {
+    const input = emptyInputFrame();
+    let state = updateSimulation(createInitialState(), { ...input, confirm: true }, 16);
+    state = updateSimulation(state, input, 240);
+    state = updateSimulation(state, { ...input, confirm: true }, 16);
+
+    const windup = stepFor(state, STRIKE_DURATION_MS * 0.12);
+    const followThrough = stepFor(state, STRIKE_DURATION_MS * 0.58);
+
+    expect(windup.drumstick.swing).toBeLessThan(0);
+    expect(followThrough.drumstick.swing).toBeGreaterThan(0.85);
   });
 
   it("launches the dummy into replay after the swing finishes", () => {
@@ -91,6 +104,25 @@ describe("updateSimulation", () => {
     expect(replaying.breakables.some((item) => item.broken)).toBe(true);
   });
 
+  it("keeps the dummy sliding after it reaches the floor", () => {
+    const input = emptyInputFrame();
+    let state = updateSimulation(createInitialState(), { ...input, confirm: true }, 16);
+    state = {
+      ...state,
+      meterValue: 0.96,
+    };
+    state = updateSimulation(state, { ...input, confirm: true }, 16);
+    state = stepFor(state, STRIKE_DURATION_MS + 20);
+
+    const grounded = stepUntilGrounded(state);
+    const sliding = stepFor(grounded, 1_200);
+
+    expect(grounded.dummy.position.y).toBe(DUMMY_GROUND_Y);
+    expect(Math.abs(sliding.dummy.velocity.z)).toBeGreaterThan(1);
+    expect(sliding.result.distance).toBeGreaterThan(grounded.result.distance + 2);
+    expect(sliding.dummy.spin.x).toBeGreaterThan(grounded.dummy.spin.x);
+  });
+
   it("resets the dummy and breakables when replay ends", () => {
     const input = emptyInputFrame();
     let state = updateSimulation(createInitialState(), { ...input, confirm: true }, 16);
@@ -117,6 +149,18 @@ function stepFor(state: GameState, totalMs: number) {
   const input = emptyInputFrame();
   for (let elapsed = 0; elapsed < totalMs; elapsed += 1000 / 60) {
     next = updateSimulation(next, input, 1000 / 60);
+  }
+  return next;
+}
+
+function stepUntilGrounded(state: GameState) {
+  let next = state;
+  const input = emptyInputFrame();
+  for (let elapsed = 0; elapsed < REPLAY_DURATION_MS; elapsed += 1000 / 60) {
+    next = updateSimulation(next, input, 1000 / 60);
+    if (next.mode === "replay" && next.replayTimeMs > 200 && next.dummy.position.y === DUMMY_GROUND_Y) {
+      return next;
+    }
   }
   return next;
 }
