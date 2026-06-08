@@ -1,4 +1,5 @@
 import type { GameSnapshot } from "../game/simulation/state";
+import { REPLAY_BLAST_DELAY_MS } from "../game/simulation/state";
 
 interface DrumstickOverlayProps {
   snapshot: GameSnapshot;
@@ -11,17 +12,19 @@ export function DrumstickOverlay({ snapshot, onStart, onRestart }: DrumstickOver
   const showStrikeBanner =
     snapshot.result.grade !== "none" &&
     snapshot.mode === "replay" &&
-    snapshot.replayTimeMs < 1_600;
+    snapshot.replayTimeMs < REPLAY_BLAST_DELAY_MS + 700;
   const showPwnd =
     snapshot.result.grade === "maximum" &&
     snapshot.mode === "replay" &&
-    snapshot.replayTimeMs < 1_250;
+    (snapshot.replayPhase === "thirdHit" ||
+      (snapshot.replayPhase === "blast" && snapshot.replayTimeMs < REPLAY_BLAST_DELAY_MS + 850));
   const meterPercent = `${Math.max(4, snapshot.meterValue * 100)}%`;
+  const replayLabel = replayPhaseLabel(snapshot);
 
   return (
     <div className="hud-layer">
       <div className="objective-chip">
-        <span>{snapshot.mode === "replay" ? "Instant replay" : "FPS Drumstick Lab"}</span>
+        <span>{snapshot.mode === "replay" ? replayLabel : "FPS Drumstick Lab"}</span>
         <strong>{snapshot.result.label}</strong>
       </div>
 
@@ -83,4 +86,12 @@ export function DrumstickOverlay({ snapshot, onStart, onRestart }: DrumstickOver
       )}
     </div>
   );
+}
+
+function replayPhaseLabel(snapshot: GameSnapshot): string {
+  if (snapshot.replayPhase === "freeze") return "Freeze frame";
+  if (snapshot.replayPhase === "angleReplay") return "Alt angle replay";
+  if (snapshot.replayPhase === "thirdHit") return "Third hit";
+  if (snapshot.replayPhase === "blast") return "Blast away";
+  return "Instant replay";
 }

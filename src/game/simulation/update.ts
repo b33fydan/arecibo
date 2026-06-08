@@ -4,6 +4,7 @@ import {
   DUMMY_GROUND_Y,
   DUMMY_START,
   GRAVITY,
+  REPLAY_BLAST_DELAY_MS,
   METER_SPEED,
   REPLAY_DURATION_MS,
   STRIKE_DURATION_MS,
@@ -11,6 +12,7 @@ import {
   createDummy,
   gradeForPower,
   labelForGrade,
+  replayPhaseForTime,
 } from "./state";
 
 const FLOOR_BOUNCE_MIN_SPEED = 1.35;
@@ -161,21 +163,29 @@ function beginReplay(state: GameState): GameState {
         y: 1.7 + normalized * 3.7,
         z: 1.4 + normalized * 5.6,
       },
-      launched: true,
+      launched: false,
     },
   };
 }
 
 function updateReplay(state: GameState, deltaMs: number): GameState {
+  const replayTimeMs = state.replayTimeMs + deltaMs;
+  const phase = replayPhaseForTime(replayTimeMs);
+  if (phase !== "blast") {
+    return updateReplayPrelude(state, replayTimeMs);
+  }
+
   const dt = deltaMs / 1000;
+  const wasBlasting = state.replayTimeMs >= REPLAY_BLAST_DELAY_MS;
+  const effectiveDt = wasBlasting ? dt : Math.max(0, (replayTimeMs - REPLAY_BLAST_DELAY_MS) / 1000);
   const velocity = {
     ...state.dummy.velocity,
-    y: state.dummy.velocity.y + GRAVITY * dt,
+    y: state.dummy.velocity.y + GRAVITY * effectiveDt,
   };
   const position = {
-    x: state.dummy.position.x + velocity.x * dt,
-    y: state.dummy.position.y + velocity.y * dt,
-    z: state.dummy.position.z + velocity.z * dt,
+    x: state.dummy.position.x + velocity.x * effectiveDt,
+    y: state.dummy.position.y + velocity.y * effectiveDt,
+    z: state.dummy.position.z + velocity.z * effectiveDt,
   };
   let grounded = false;
 
@@ -186,15 +196,15 @@ function updateReplay(state: GameState, deltaMs: number): GameState {
     const impactSpeed = Math.abs(velocity.y);
     velocity.y = impactSpeed > FLOOR_BOUNCE_MIN_SPEED ? impactSpeed * FLOOR_BOUNCE : 0;
 
-    const slideDamping = Math.pow(SLIDE_FRICTION_PER_SECOND, dt);
+    const slideDamping = Math.pow(SLIDE_FRICTION_PER_SECOND, effectiveDt);
     velocity.x *= slideDamping;
     velocity.z *= slideDamping;
 
     const slideSpeed = Math.hypot(velocity.x, velocity.z);
     if (slideSpeed > STOP_SPEED) {
-      const replaySeconds = (state.replayTimeMs + deltaMs) / 1000;
-      const jitter = Math.sin(replaySeconds * 8.5) * state.lockedPower * 0.72 * dt;
-      const weave = Math.cos(replaySeconds * 5.2) * state.lockedPower * 0.28 * dt;
+      const replaySeconds = replayTimeMs / 1000;
+      const jitter = Math.sin(replaySeconds * 8.5) * state.lockedPower * 0.72 * effectiveDt;
+      const weave = Math.cos(replaySeconds * 5.2) * state.lockedPower * 0.28 * effectiveDt;
       velocity.x += jitter + weave;
     } else {
       velocity.x = 0;
@@ -207,7 +217,7 @@ function updateReplay(state: GameState, deltaMs: number): GameState {
     ? {
         x: clamp(state.dummy.spin.x + horizontalSpeed * 0.018, 0, 20),
         y: clamp(
-          state.dummy.spin.y + Math.sin((state.replayTimeMs + deltaMs) * 0.01) * 0.045,
+          state.dummy.spin.y + Math.sin(replayTimeMs * 0.01) * 0.045,
           -10,
           12,
         ),
@@ -265,7 +275,7 @@ function updateReplay(state: GameState, deltaMs: number): GameState {
     ...state,
     mode: state.mode,
     modeTimeMs: state.modeTimeMs,
-    replayTimeMs: state.replayTimeMs + deltaMs,
+    replayTimeMs,
     meterPhase: state.meterPhase,
     meterValue: state.meterValue,
     drumstick: {
@@ -274,6 +284,7 @@ function updateReplay(state: GameState, deltaMs: number): GameState {
     },
     dummy: {
       ...state.dummy,
+      launched: true,
       position,
       velocity,
       spin,
@@ -281,6 +292,60 @@ function updateReplay(state: GameState, deltaMs: number): GameState {
     breakables,
     result,
     bestScore,
+  };
+}
+
+function updateReplayPrelude(state: GameState, replayTimeMs: number): GameState {
+  const replayDone = state.modeTimeMs >= REPLAY_DURATION_MS;
+  if (replayDone) {
+    return {
+      ...state,
+      mode: "aiming",
+      modeTimeMs: 0,
+      replayTimeMs: 0,
+      meterPhase: 0,
+      meterValue: 0.5,
+      lockedPower: 0,
+      drumstick: {
+        ...state.drumstick,
+        swing: 0,
+      },
+      dummy: createDummy(),
+      breakables: cloneBreakables(state.breakables).map((item) => ({
+        ...item,
+        broken: false,
+        impactPower: 0,
+      })),
+      result: {
+        grade: "none",
+        power: 0,
+        distance: 0,
+        score: 0,
+        brokenCount: 0,
+        label: "Aim",
+        echo: "Hit space at the top",
+      },
+      bestScore: state.bestScore,
+    };
+  }
+
+  return {
+    ...state,
+    replayTimeMs,
+    drumstick: {
+      ...state.drumstick,
+      swing: 0,
+    },
+    dummy: {
+      ...state.dummy,
+      position: { ...DUMMY_START },
+      launched: false,
+    },
+    result: {
+      ...state.result,
+      distance: 0,
+      brokenCount: state.breakables.filter((item) => item.broken).length,
+    },
   };
 }
 

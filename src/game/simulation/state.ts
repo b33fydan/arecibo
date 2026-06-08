@@ -2,6 +2,8 @@ export type GameMode = "menu" | "aiming" | "striking" | "replay";
 
 export type StrikeGrade = "none" | "soft" | "solid" | "maximum";
 
+export type ReplayPhase = "none" | "freeze" | "angleReplay" | "thirdHit" | "blast";
+
 export interface Vector3State {
   x: number;
   y: number;
@@ -59,6 +61,7 @@ export interface GameState {
 export interface GameSnapshot {
   coordinateSystem: string;
   mode: GameMode;
+  replayPhase: ReplayPhase;
   meterValue: number;
   lockedPower: number;
   drumstick: DrumstickState;
@@ -71,6 +74,10 @@ export interface GameSnapshot {
 
 export const STRIKE_DURATION_MS = 560;
 export const REPLAY_DURATION_MS = 6_500;
+export const REPLAY_FREEZE_MS = 820;
+export const REPLAY_ANGLE_REPLAY_MS = 1_720;
+export const REPLAY_THIRD_HIT_MS = 2_420;
+export const REPLAY_BLAST_DELAY_MS = 2_760;
 export const METER_SPEED = 0.0094;
 export const GRAVITY = -12.8;
 export const PERFECT_POWER = 0.94;
@@ -159,6 +166,7 @@ export function toSnapshot(state: GameState): GameSnapshot {
   return {
     coordinateSystem: "Three.js world: x right, y up, z toward camera; target launches along negative z",
     mode: state.mode,
+    replayPhase: state.mode === "replay" ? replayPhaseForTime(state.replayTimeMs) : "none",
     meterValue: round(state.meterValue),
     lockedPower: round(state.lockedPower),
     drumstick: {
@@ -225,6 +233,13 @@ export function cloneBreakables(items: BreakableState[]): BreakableState[] {
 
 export function round(value: number): number {
   return Math.round(value * 100) / 100;
+}
+
+export function replayPhaseForTime(replayTimeMs: number): ReplayPhase {
+  if (replayTimeMs < REPLAY_FREEZE_MS) return "freeze";
+  if (replayTimeMs < REPLAY_ANGLE_REPLAY_MS) return "angleReplay";
+  if (replayTimeMs < REPLAY_BLAST_DELAY_MS) return "thirdHit";
+  return "blast";
 }
 
 function roundVector(vector: Vector3State): Vector3State {

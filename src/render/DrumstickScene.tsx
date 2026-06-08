@@ -2,6 +2,12 @@ import { Canvas, useFrame } from "@react-three/fiber";
 import { PerspectiveCamera } from "@react-three/drei";
 import { useMemo, useRef } from "react";
 import * as THREE from "three";
+import {
+  REPLAY_ANGLE_REPLAY_MS,
+  REPLAY_BLAST_DELAY_MS,
+  REPLAY_FREEZE_MS,
+  REPLAY_THIRD_HIT_MS,
+} from "../game/simulation/state";
 import type { GameSnapshot } from "../game/simulation/state";
 
 interface DrumstickSceneProps {
@@ -53,11 +59,35 @@ function SceneContents({ snapshot, viewYaw }: DrumstickSceneProps) {
         snapshot.dummy.position.z,
       );
       const openingCam = new THREE.Vector3(1.9, 1.85, 1.6);
+      const seededAngle = Math.sin(snapshot.lockedPower * 91.7) * Math.PI;
+      const angleCam = new THREE.Vector3(
+        target.x + Math.sin(seededAngle) * 4.3,
+        2.2,
+        target.z + Math.cos(seededAngle) * 4.3,
+      );
+      const thirdHitCam = new THREE.Vector3(target.x - 2.35, 1.65, target.z + 2.65);
       const chaseCam = new THREE.Vector3(target.x + 4.2, 2.9, target.z + 6.8);
       const wideCam = new THREE.Vector3(target.x + 6.8, 4.1, target.z + 8.6);
       const slideCam = new THREE.Vector3(target.x + 3.2, 1.35, target.z + 4.6);
-      const desired = replaySeconds < 0.55 ? openingCam : isGroundedRoll ? slideCam : replaySeconds < 2.4 ? chaseCam : wideCam;
-      camera.position.lerp(desired, isGroundedRoll ? 0.45 : replaySeconds < 0.55 ? 0.18 : 0.08);
+      const desired =
+        snapshot.replayPhase === "freeze"
+          ? openingCam
+          : snapshot.replayPhase === "angleReplay"
+            ? angleCam
+            : snapshot.replayPhase === "thirdHit"
+              ? thirdHitCam
+              : isGroundedRoll
+                ? slideCam
+                : replaySeconds < 2.9
+                  ? chaseCam
+                  : wideCam;
+      const cutSpeed =
+        snapshot.replayPhase === "freeze" || snapshot.replayPhase === "angleReplay" || snapshot.replayPhase === "thirdHit"
+          ? 0.52
+          : isGroundedRoll
+            ? 0.45
+            : 0.08;
+      camera.position.lerp(desired, cutSpeed);
       camera.lookAt(target);
       return;
     }
@@ -69,7 +99,7 @@ function SceneContents({ snapshot, viewYaw }: DrumstickSceneProps) {
   return (
     <>
       <PerspectiveCamera ref={cameraRef} makeDefault fov={58} position={[0, 1.55, 3.6]}>
-        {snapshot.mode !== "replay" && <DrumstickView snapshot={snapshot} />}
+        {(snapshot.mode !== "replay" || snapshot.replayPhase !== "blast") && <DrumstickView snapshot={snapshot} />}
       </PerspectiveCamera>
       <ambientLight intensity={0.72} />
       <directionalLight
@@ -256,7 +286,10 @@ function StrikeBurst({ snapshot }: SnapshotProps) {
   const power = snapshot.lockedPower || snapshot.result.power;
   const isMaximum = snapshot.result.grade === "maximum";
   const scale = 0.65 + power * 0.75;
-  const isImpactReplay = snapshot.mode === "replay" && snapshot.replayTimeMs < 1_350;
+  const isImpactReplay =
+    snapshot.mode === "replay" &&
+    (snapshot.replayPhase === "thirdHit" ||
+      (snapshot.replayPhase === "blast" && snapshot.replayTimeMs < REPLAY_BLAST_DELAY_MS + 700));
   const confetti = [
     ["#ffdf62", -0.9, 0.9, -4.15, 0.5],
     ["#ff5f7e", -0.35, 1.25, -4.35, -0.7],
@@ -294,7 +327,7 @@ function StrikeBurst({ snapshot }: SnapshotProps) {
 }
 
 function MaximumImpactSmoke({ replayTimeMs }: { replayTimeMs: number }) {
-  const burst = Math.min(1, replayTimeMs / 900);
+  const burst = Math.min(1, Math.max(0, replayTimeMs - REPLAY_THIRD_HIT_MS) / 900);
   const opacity = Math.max(0, 0.62 - burst * 0.34);
   const puffs = [
     [-0.72, 0.28, -0.08, 0.42],
@@ -328,6 +361,7 @@ function BalloonDummy({ snapshot }: SnapshotProps) {
   const group = useRef<THREE.Group>(null);
   const replaySeconds = snapshot.replayTimeMs / 1000;
   const isReplay = snapshot.mode === "replay" && snapshot.dummy.launched;
+  const isReplayPrelude = snapshot.mode === "replay" && !snapshot.dummy.launched;
   const horizontalSpeed = Math.hypot(snapshot.dummy.velocity.x, snapshot.dummy.velocity.z);
   const isGroundedRoll = isReplay && snapshot.dummy.position.y <= 0.5 && horizontalSpeed > 0.18;
   const ragdoll = isReplay ? Math.min(1.25, 0.28 + horizontalSpeed * 0.055) : 0;
@@ -341,12 +375,20 @@ function BalloonDummy({ snapshot }: SnapshotProps) {
     const wobble = Math.sin(clock.elapsedTime * 4) * 0.04;
     const rollBoost = isGroundedRoll ? 0.3 + horizontalSpeed * 0.012 : 0.16;
     const groundLean = isGroundedRoll ? Math.PI * 0.42 : 0;
+    const preludeLean = isReplayPrelude
+      ? snapshot.replayPhase === "freeze"
+        ? 0.08
+        : snapshot.replayPhase === "angleReplay"
+          ? -0.1
+          : 0.22 + Math.sin(spinTime * 18) * 0.05
+      : 0;
     group.current.rotation.set(
       groundLean + snapshot.dummy.spin.x * spinTime * rollBoost + wobble,
       snapshot.dummy.spin.y * spinTime * (isGroundedRoll ? 0.24 : 0.14) + Math.sin(spinTime * 9) * ragdoll * 0.1,
       groundLean * 0.7 +
         snapshot.dummy.spin.z * spinTime * (isGroundedRoll ? 0.31 : 0.18) +
-        Math.cos(spinTime * 8) * ragdoll * 0.12,
+        Math.cos(spinTime * 8) * ragdoll * 0.12 +
+        preludeLean,
     );
   });
 
@@ -397,10 +439,13 @@ function DrumstickView({ snapshot }: SnapshotProps) {
   useFrame(({ clock }) => {
     if (!group.current) return;
     const idle = Math.sin(clock.elapsedTime * 2.2) * 0.025;
-    const swing = snapshot.drumstick.swing;
+    const swing = replaySwingForSnapshot(snapshot);
     const windup = Math.min(0, swing);
     const followThrough = Math.max(0, swing);
-    const isMaximumCharge = snapshot.mode === "striking" && snapshot.result.grade === "maximum" && swing < 0;
+    const isMaximumCharge =
+      snapshot.result.grade === "maximum" &&
+      swing < 0 &&
+      (snapshot.mode === "striking" || (snapshot.mode === "replay" && snapshot.replayPhase === "thirdHit"));
     const tremble = isMaximumCharge
       ? Math.sin(clock.elapsedTime * 82) * 0.055 + Math.sin(clock.elapsedTime * 131) * 0.026
       : 0;
@@ -436,4 +481,46 @@ function DrumstickView({ snapshot }: SnapshotProps) {
       </mesh>
     </group>
   );
+}
+
+function replaySwingForSnapshot(snapshot: GameSnapshot): number {
+  if (snapshot.mode !== "replay") {
+    return snapshot.drumstick.swing;
+  }
+
+  if (snapshot.replayPhase === "freeze") {
+    return 1.12;
+  }
+
+  if (snapshot.replayPhase === "angleReplay") {
+    const progress = clamp01((snapshot.replayTimeMs - REPLAY_FREEZE_MS) / (REPLAY_ANGLE_REPLAY_MS - REPLAY_FREEZE_MS));
+    if (progress < 0.35) {
+      return -0.2 * easeOutQuad(progress / 0.35);
+    }
+
+    return -0.2 + easeOutCubic((progress - 0.35) / 0.65) * 1.42;
+  }
+
+  if (snapshot.replayPhase === "thirdHit") {
+    const progress = clamp01((snapshot.replayTimeMs - REPLAY_ANGLE_REPLAY_MS) / (REPLAY_BLAST_DELAY_MS - REPLAY_ANGLE_REPLAY_MS));
+    if (progress < 0.72) {
+      return -0.28 + Math.sin(progress * 72) * 0.06 + Math.sin(progress * 47) * 0.035;
+    }
+
+    return -0.22 + easeOutCubic((progress - 0.72) / 0.28) * 1.78;
+  }
+
+  return 0;
+}
+
+function clamp01(value: number): number {
+  return Math.max(0, Math.min(1, value));
+}
+
+function easeOutQuad(value: number): number {
+  return 1 - Math.pow(1 - clamp01(value), 2);
+}
+
+function easeOutCubic(value: number): number {
+  return 1 - Math.pow(1 - clamp01(value), 3);
 }

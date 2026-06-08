@@ -25,6 +25,8 @@ Original prompt: User brought an X post about a Claude Code browser-game stack a
 - Slimmed the balloon dummy, added a larger brick wall breakable behind the target, made wall bricks scatter individually, and expanded the background with taller tree clusters.
 - Added maximum-drumstrike charge trembling, PWND impact motion graphic, smoke/shockwave puffs, louder maximum impact audio, extra echo pings, and a delayed speech echo.
 - Verified the wall/PWND pass in `output/drumstick-wall-pwnd` and `output/drumstick-wall-standard`: 12 logic tests pass, max charge stays in striking before the snap, brick wall breaks in replay, standard client has no console error artifacts, and screenshots show the wall, PWND impact, and readable replay.
+- Added a staged instant-replay beat: the first impact freezes the target in place, a deterministic alternate camera replays the hit, the third-hit angle trembles and snaps the drumstick again, and only then does the blast physics launch the target into the wall.
+- Verified the triple-replay pass in `output/drumstick-triple-replay` and `output/drumstick-triple-standard`: replay state advances through freeze, alternate angle, third hit, and blast; the target remains pinned until blast; wall/crate breakage still occurs after launch; 12 logic tests pass; production build passes; critical audit reports no vulnerabilities.
 
 ## TODO
 - Tune camera beats further so very long launches feel more dynamic instead of drifting into a distant follow shot.
