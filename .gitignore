@@ -1,0 +1,10 @@
+.superpowers/
+reference-repos/
+node_modules/
+dist/
+coverage/
+output/
+*.tsbuildinfo
+.env
+.env.local
+*.log
