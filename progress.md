@@ -27,6 +27,8 @@ Original prompt: User brought an X post about a Claude Code browser-game stack a
 - Verified the wall/PWND pass in `output/drumstick-wall-pwnd` and `output/drumstick-wall-standard`: 12 logic tests pass, max charge stays in striking before the snap, brick wall breaks in replay, standard client has no console error artifacts, and screenshots show the wall, PWND impact, and readable replay.
 - Added a staged instant-replay beat: the first impact freezes the target in place, a deterministic alternate camera replays the hit, the third-hit angle trembles and snaps the drumstick again, and only then does the blast physics launch the target into the wall.
 - Verified the triple-replay pass in `output/drumstick-triple-replay` and `output/drumstick-triple-standard`: replay state advances through freeze, alternate angle, third hit, and blast; the target remains pinned until blast; wall/crate breakage still occurs after launch; 12 logic tests pass; production build passes; critical audit reports no vulnerabilities.
+- Simplified the replay back down after playtesting: removed the named freeze/alternate-angle/third-hit sequence and kept one short impact pause before direct launch physics. The drumstick stays in follow-through during the pause, then the target immediately blasts away.
+- Verified the simplified replay in `output/drumstick-simple-replay-standard` and `output/drumstick-simple-replay-max`: standard client has no console error artifact; max strike pauses with the target pinned at 0.0m, then launches, breaks the wall/crate, and keeps the existing ragdoll slide. 12 logic tests and production build pass.
 
 ## TODO
 - Tune camera beats further so very long launches feel more dynamic instead of drifting into a distant follow shot.

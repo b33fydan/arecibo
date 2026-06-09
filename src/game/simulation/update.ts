@@ -4,15 +4,14 @@ import {
   DUMMY_GROUND_Y,
   DUMMY_START,
   GRAVITY,
-  REPLAY_BLAST_DELAY_MS,
   METER_SPEED,
   REPLAY_DURATION_MS,
+  REPLAY_IMPACT_PAUSE_MS,
   STRIKE_DURATION_MS,
   cloneBreakables,
   createDummy,
   gradeForPower,
   labelForGrade,
-  replayPhaseForTime,
 } from "./state";
 
 const FLOOR_BOUNCE_MIN_SPEED = 1.35;
@@ -170,14 +169,13 @@ function beginReplay(state: GameState): GameState {
 
 function updateReplay(state: GameState, deltaMs: number): GameState {
   const replayTimeMs = state.replayTimeMs + deltaMs;
-  const phase = replayPhaseForTime(replayTimeMs);
-  if (phase !== "blast") {
-    return updateReplayPrelude(state, replayTimeMs);
+  if (replayTimeMs < REPLAY_IMPACT_PAUSE_MS) {
+    return updateReplayPause(state, replayTimeMs);
   }
 
   const dt = deltaMs / 1000;
-  const wasBlasting = state.replayTimeMs >= REPLAY_BLAST_DELAY_MS;
-  const effectiveDt = wasBlasting ? dt : Math.max(0, (replayTimeMs - REPLAY_BLAST_DELAY_MS) / 1000);
+  const wasMoving = state.replayTimeMs >= REPLAY_IMPACT_PAUSE_MS;
+  const effectiveDt = wasMoving ? dt : Math.max(0, (replayTimeMs - REPLAY_IMPACT_PAUSE_MS) / 1000);
   const velocity = {
     ...state.dummy.velocity,
     y: state.dummy.velocity.y + GRAVITY * effectiveDt,
@@ -295,47 +293,10 @@ function updateReplay(state: GameState, deltaMs: number): GameState {
   };
 }
 
-function updateReplayPrelude(state: GameState, replayTimeMs: number): GameState {
-  const replayDone = state.modeTimeMs >= REPLAY_DURATION_MS;
-  if (replayDone) {
-    return {
-      ...state,
-      mode: "aiming",
-      modeTimeMs: 0,
-      replayTimeMs: 0,
-      meterPhase: 0,
-      meterValue: 0.5,
-      lockedPower: 0,
-      drumstick: {
-        ...state.drumstick,
-        swing: 0,
-      },
-      dummy: createDummy(),
-      breakables: cloneBreakables(state.breakables).map((item) => ({
-        ...item,
-        broken: false,
-        impactPower: 0,
-      })),
-      result: {
-        grade: "none",
-        power: 0,
-        distance: 0,
-        score: 0,
-        brokenCount: 0,
-        label: "Aim",
-        echo: "Hit space at the top",
-      },
-      bestScore: state.bestScore,
-    };
-  }
-
+function updateReplayPause(state: GameState, replayTimeMs: number): GameState {
   return {
     ...state,
     replayTimeMs,
-    drumstick: {
-      ...state.drumstick,
-      swing: 0,
-    },
     dummy: {
       ...state.dummy,
       position: { ...DUMMY_START },

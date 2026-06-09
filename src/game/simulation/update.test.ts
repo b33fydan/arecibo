@@ -4,10 +4,9 @@ import {
   createInitialState,
   DUMMY_GROUND_Y,
   DUMMY_START,
-  REPLAY_BLAST_DELAY_MS,
   REPLAY_DURATION_MS,
+  REPLAY_IMPACT_PAUSE_MS,
   STRIKE_DURATION_MS,
-  replayPhaseForTime,
 } from "./state";
 import type { GameState } from "./state";
 import { updateSimulation } from "./update";
@@ -56,7 +55,7 @@ describe("updateSimulation", () => {
     expect(followThrough.drumstick.swing).toBeGreaterThan(0.85);
   });
 
-  it("freezes the dummy when replay starts", () => {
+  it("briefly pauses the dummy when replay starts", () => {
     const input = emptyInputFrame();
     let state = updateSimulation(createInitialState(), { ...input, confirm: true }, 16);
     state = updateSimulation(state, input, 240);
@@ -68,7 +67,7 @@ describe("updateSimulation", () => {
     expect(replay.dummy.launched).toBe(false);
     expect(replay.dummy.position).toEqual(DUMMY_START);
     expect(replay.dummy.velocity.z).toBeLessThan(0);
-    expect(replayPhaseForTime(replay.replayTimeMs)).toBe("freeze");
+    expect(replay.replayTimeMs).toBeLessThan(REPLAY_IMPACT_PAUSE_MS);
   });
 
   it("updates distance and best score during replay", () => {
@@ -78,7 +77,7 @@ describe("updateSimulation", () => {
     state = updateSimulation(state, { ...input, confirm: true }, 16);
     state = stepFor(state, STRIKE_DURATION_MS + 20);
 
-    const replaying = stepFor(state, REPLAY_BLAST_DELAY_MS + 500);
+    const replaying = stepFor(state, REPLAY_IMPACT_PAUSE_MS + 500);
 
     expect(replaying.result.distance).toBeGreaterThan(0);
     expect(replaying.bestScore).toBeGreaterThan(0);
@@ -123,7 +122,7 @@ describe("updateSimulation", () => {
       meterValue: 0.96,
     };
     state = updateSimulation(state, { ...input, confirm: true }, 16);
-    state = stepFor(state, STRIKE_DURATION_MS + REPLAY_BLAST_DELAY_MS + 20);
+    state = stepFor(state, STRIKE_DURATION_MS + REPLAY_IMPACT_PAUSE_MS + 20);
 
     const replaying = stepFor(state, 900);
 
@@ -157,7 +156,7 @@ describe("updateSimulation", () => {
       meterValue: 0.96,
     };
     state = updateSimulation(state, { ...input, confirm: true }, 16);
-    state = stepFor(state, STRIKE_DURATION_MS + REPLAY_BLAST_DELAY_MS + 20);
+    state = stepFor(state, STRIKE_DURATION_MS + REPLAY_IMPACT_PAUSE_MS + 20);
 
     const grounded = stepUntilGrounded(state);
     const sliding = stepFor(grounded, 1_200);
@@ -206,7 +205,7 @@ function stepUntilGrounded(state: GameState) {
     if (
       next.mode === "replay" &&
       next.dummy.launched &&
-      next.replayTimeMs > REPLAY_BLAST_DELAY_MS &&
+      next.replayTimeMs > REPLAY_IMPACT_PAUSE_MS &&
       next.dummy.position.y === DUMMY_GROUND_Y
     ) {
       return next;
